@@ -1,7 +1,7 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use clap::Parser;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::{Read, Seek, SeekFrom};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -17,14 +17,26 @@ fn main() -> Result<()> {
 
     // Open file
     println!("Opening: {}", args.filename);
-    let mut file = File::open(args.filename)?;
+    let mut file = match File::open(args.filename) {
+        Ok(file) => file,
+        Err(e) => {
+            bail!("File open: {}", e);
+        }
+    };
 
-    // Read file into contents
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
+    // Get file length
+    let meta = file.metadata()?;
+    let file_len = meta.len() as usize;
+
+    // Read file
+    // Leaving start at 0 for now and end at end of file
+    // Will change this to values specified from CLI
+    file.seek(SeekFrom::Start(0))?;
+    let mut buffer = vec![0; file_len];
+    file.read_exact(&mut buffer)?;
 
     // Output results
-    println!("{}", contents);
+    println!("{:?}", buffer);
 
     Ok(())
 }
