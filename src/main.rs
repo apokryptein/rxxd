@@ -4,6 +4,8 @@ use colored::Colorize;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
+// TODO: Add ability to retrieve input through stdin
+
 #[derive(Parser, Debug)]
 #[command(
     author = "apokryptein",
