@@ -1,5 +1,6 @@
 use anyhow::{Result, bail};
 use clap::Parser;
+use colored::Colorize;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 
@@ -51,14 +52,23 @@ struct Args {
         help = "Start at <seek> bytes abs infile offset."
     )]
     seek: u64,
+
+    // Colorize output
+    #[arg(long, action=clap::ArgAction::SetTrue)]
+    color: bool,
 }
 
 fn main() -> Result<()> {
     // Parse args
     let args = Args::parse();
 
+    // Necessary color overried when using colored crate
+    if args.color {
+        colored::control::set_override(true);
+    }
+
     // Open file
-    println!("Opening: {}", args.filename);
+    println!("FILE: {}", args.filename.red());
     let mut file = match File::open(args.filename) {
         Ok(file) => file,
         Err(e) => {
@@ -116,8 +126,23 @@ fn main() -> Result<()> {
             .collect::<Vec<String>>()
             .join(" ");
 
+        // Calculate padding needed for consistent alignment
+        let hex_chars_per_byte = 2;
+        let spaces_between_groups = (args.cols / args.groupsize) - 1;
+        let expected_hex_width = (args.cols * hex_chars_per_byte) + spaces_between_groups;
+        let padded_hex = format!("{:<width$}", hex_string, width = expected_hex_width);
+
         // Print line
-        println!("{:08x}:  {}  {}", address, hex_string, get_string(chunk),);
+        if args.color {
+            println!(
+                "{}: {} {}",
+                format!("{:08x}", address).blue(),
+                padded_hex.white(),
+                get_string(chunk).green(),
+            );
+        } else {
+            println!("{:08x}:  {}  {}", address, padded_hex, get_string(chunk),);
+        }
 
         // Update address
         address += args.cols;
