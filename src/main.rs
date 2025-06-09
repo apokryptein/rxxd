@@ -1,10 +1,8 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
-
-// TODO: Add ability to retrieve input through stdin
+use std::io::{Read, Seek, SeekFrom, stdin};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -15,7 +13,7 @@ use std::io::{Read, Seek, SeekFrom};
 struct Args {
     // Filename
     #[arg(short, long)]
-    filename: String,
+    filename: Option<String>,
 
     // Columns
     #[arg(
@@ -69,46 +67,60 @@ fn main() -> Result<()> {
         colored::control::set_override(true);
     }
 
-    // Open file
-    println!("FILE: {}", args.filename.red());
-    let mut file = match File::open(args.filename) {
-        Ok(file) => file,
-        Err(e) => {
-            bail!("File open: {}", e);
-        }
-    };
+    // Read data from either provided file or stdin into
+    // a byte buffer -> Vec<u8>
+    let buffer = match &args.filename {
+        // If a file has been provided
+        Some(filename) => {
+            println!("FILE: {}", filename.red());
+            let mut file = File::open(filename)?;
 
-    // Get file size
-    let meta = file.metadata()?;
-    let file_size = meta.len() as usize;
+            // Handle seek for files
+            if args.seek > 0 {
+                file.seek(SeekFrom::Start(args.seek))?;
+            }
 
-    // Set read length based on args.len and args.seek
-    let read_len: usize = match args.len {
-        // If no length arg is provided
-        0 => {
-            // If no seek then starting at 0
-            if args.seek == 0 {
-                // Read length will be size of input (file)
-                file_size
-            // If args.seek provided
+            let mut buffer = Vec::new();
+
+            // If reading specific length
+            if args.len > 0 {
+                // Using a temporary buffer to read entire length specificied
+                // by args.len, then truncating to the actual size read. I am doing this to avoid
+                // sizing a buffer that exceeds the data length
+                let mut temp_buffer = Vec::new();
+                let bytes_read = file.read_to_end(&mut temp_buffer)?;
+                temp_buffer.truncate(bytes_read);
+                buffer = temp_buffer;
+            // Otherwise read to end of file
             } else {
-                // Read length is size of file minus args.seek
-                file_size - (args.seek as usize)
+                file.read_to_end(&mut buffer)?;
+            }
+            buffer
+        }
+        None => {
+            // Read all data from stdin into memory
+            let mut buffer = Vec::new();
+            stdin().read_to_end(&mut buffer)?;
+
+            // Get stdin size
+            let start = args.seek as usize;
+
+            // Make sure we aren't trying to start after the end of the data
+            if start >= buffer.len() {
+                Vec::new()
+            } else {
+                // If length is provided
+                let end = if args.len > 0 {
+                    // End is the smaller of data length and seek + length
+                    std::cmp::min(start + args.len, buffer.len())
+                } else {
+                    // If no length is provided read to end
+                    buffer.len()
+                };
+                buffer[start..end].to_vec()
             }
         }
-        // If not 0, then just use provided size
-        _ => args.len,
     };
-
-    // Ensure requested read size does not exceed the size of the provided data
-    if read_len > file_size {
-        bail!("[!] Cannot specify a read size larger than the file");
-    }
-
-    // Read file from args.seek offset (default of 0)
-    file.seek(SeekFrom::Start(args.seek))?;
-    let mut buffer = vec![0; read_len];
-    file.read_exact(&mut buffer)?;
 
     // Track offset address
     let mut address: usize = 0;
