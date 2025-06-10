@@ -53,6 +53,10 @@ struct Args {
     )]
     seek: u64,
 
+    // Option for Little Endian byte order
+    #[arg(short, long, action=clap::ArgAction::SetTrue)]
+    endian: bool,
+
     // Colorize output
     #[arg(long, action=clap::ArgAction::SetTrue)]
     color: bool,
@@ -135,7 +139,15 @@ fn main() -> Result<()> {
         let hex_string = chunk
             .chunks(args.groupsize)
             .map(|byte_size| {
-                byte_size
+                let bytes: Vec<u8> = if args.endian {
+                    // If little endian, reverse byte order
+                    byte_size.iter().rev().cloned().collect()
+                } else {
+                    // If not little endian keep ordiginal order (big endian)
+                    byte_size.to_vec()
+                };
+
+                bytes
                     .iter()
                     .map(|b| format!("{:02x}", b))
                     .collect::<Vec<String>>()
