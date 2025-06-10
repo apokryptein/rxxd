@@ -54,11 +54,11 @@ struct Args {
     seek: u64,
 
     // Option for Little Endian byte order
-    #[arg(short, long, action=clap::ArgAction::SetTrue)]
+    #[arg(short, long, action=clap::ArgAction::SetTrue, help="Display bytes in Little Endian byte order. [default: Big Endian]")]
     endian: bool,
 
     // Colorize output
-    #[arg(long, action=clap::ArgAction::SetTrue)]
+    #[arg(long, action=clap::ArgAction::SetTrue, help="Colorize output")]
     color: bool,
 }
 
