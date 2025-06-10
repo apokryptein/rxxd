@@ -75,7 +75,8 @@ fn main() -> Result<()> {
             println!("FILE: {}", filename.red());
             let mut file = File::open(filename)?;
 
-            // Handle seek for files
+            // Handle seek for files:
+            // Set file cursor to desired offset
             if args.seek > 0 {
                 file.seek(SeekFrom::Start(args.seek))?;
             }
@@ -88,9 +89,12 @@ fn main() -> Result<()> {
                 // by args.len, then truncating to the actual size read. I am doing this to avoid
                 // sizing a buffer that exceeds the data length
                 let mut temp_buffer = Vec::new();
-                let bytes_read = file.read_to_end(&mut temp_buffer)?;
-                temp_buffer.truncate(bytes_read);
-                buffer = temp_buffer;
+                //let bytes_read = file.read_to_end(&mut temp_buffer)?;
+                file.read_to_end(&mut temp_buffer)?;
+
+                // Take just args.len bytes
+                buffer = temp_buffer[..args.len].to_vec();
+
             // Otherwise read to end of file
             } else {
                 file.read_to_end(&mut buffer)?;
