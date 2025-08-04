@@ -1,6 +1,6 @@
 # rxxd
 
-**Rxxd** is a basic xxd-like hexdump tool written in Rust for learning and general use.
+**Rxxd** is a basic xxd-like hexdump tool written as a learning exercise.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
